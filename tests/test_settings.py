@@ -27,8 +27,8 @@ def test_ac1_valid_config(valid_yaml: Path):
     assert len(settings.competitors) == 3
     assert settings.interval_minutes == 60
     assert settings.cold_start_days == 7
-    assert settings.llm.provider == "openai"
-    assert settings.llm.model == "gpt-4o-mini"
+    assert settings.llm.provider == "qwen"
+    assert settings.llm.model == "qwen-plus"
 
 
 def test_ac2_missing_sources(tmp_path: Path):

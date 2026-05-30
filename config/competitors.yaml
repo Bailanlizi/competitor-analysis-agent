@@ -1,14 +1,12 @@
 interval_minutes: 60
-cold_start_days: 7
+cold_start_days: 30
 timezone: "Asia/Shanghai"
-feishu_webhook: ""
+feishu_webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/797b85b5-a328-4cfc-8fc2-93d80b2ed5f6"
 dingtalk_webhook: ""
 
 llm:
-  provider: openai
-  model: gpt-4o-mini
-  # api_key_env: OPENAI_API_KEY   # optional override
-  # base_url: ""                  # required for custom/azure
+  provider: qwen
+  model: qwen3-max
 
 search:
   enabled: false
@@ -18,34 +16,70 @@ search:
     - "competitor product update"
   max_results: 5
 
+# competitors:
+#   - id: competitor_a
+#     name: "竞品 A（占位）"
+#     enabled: true
+#     sources:
+#       - type: rss
+#         url: "https://example.com/competitor_a/feed.xml"
+#         name: ""
+#       - type: http
+#         url: "https://example.com/competitor_a/changelog"
+#         name: "更新日志"
+
+#   - id: competitor_b
+#     name: "竞品 B（占位）"
+#     enabled: true
+#     sources:
+#       - type: rss
+#         url: "https://example.com/competitor_b/blog/feed.xml"
+#       - type: http
+#         url: "https://example.com/competitor_b/pricing"
+#         name: "定价页面"
+
+#   - id: competitor_c
+#     name: "竞品 C（占位）"
+#     enabled: true
+#     sources:
+#       - type: rss
+#         url: "https://example.com/competitor_c/releases.atom"
+#       - type: http
+#         url: "https://example.com/competitor_c/changelog"
+#         name: "版本更新"
 competitors:
-  - id: competitor_a
-    name: "竞品 A（占位）"
+  - id: slack
+    name: "Slack"
     enabled: true
     sources:
       - type: rss
-        url: "https://example.com/competitor_a/feed.xml"
-        name: ""
+        url: "https://docs.slack.dev/changelog/rss.xml"
+      - type: rss
+        url: "https://docs.slack.dev/changelog/atom.xml"
       - type: http
-        url: "https://example.com/competitor_a/changelog"
-        name: "更新日志"
+        url: "https://docs.slack.dev/changelog"
+        name: "Developer Changelog"
 
-  - id: competitor_b
-    name: "竞品 B（占位）"
+  - id: stripe
+    name: "Stripe"
     enabled: true
     sources:
       - type: rss
-        url: "https://example.com/competitor_b/blog/feed.xml"
+        url: "https://stripe.com/blog/feed.rss"
       - type: http
-        url: "https://example.com/competitor_b/pricing"
-        name: "定价页面"
+        url: "https://docs.stripe.com/changelog"
+        name: "Product Changelog"
+      - type: http
+        url: "https://docs.stripe.com/upgrades"
+        name: "API Upgrades"
 
-  - id: competitor_c
-    name: "竞品 C（占位）"
+  - id: linear
+    name: "Linear"
     enabled: true
     sources:
-      - type: rss
-        url: "https://example.com/competitor_c/releases.atom"
       - type: http
-        url: "https://example.com/competitor_c/changelog"
-        name: "版本更新"
+        url: "https://linear.app/changelog"
+        name: "Product Changelog"
+      - type: http
+        url: "https://linear.app/blog"
+        name: "Engineering Blog"

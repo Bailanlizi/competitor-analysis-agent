@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, Field, HttpUrl, ValidationError, field_validator, model_validator
+from pydantic import BaseModel, Field, HttpUrl, ValidationError, field_validator
+
+from config.env import load_env
 
 SETTINGS: "AppSettings | None" = None
 
@@ -54,18 +56,10 @@ LLMProviderName = Literal[
 class LLMConfig(BaseModel):
     provider: LLMProviderName = "openai"
     model: str = "gpt-4o-mini"
-    api_key_env: str = ""
-    base_url: str = ""
     timeout: int = Field(default=30, ge=5, le=120)
     max_tokens_extract: int = Field(default=500, ge=1, le=4096)
     max_tokens_summary: int = Field(default=200, ge=1, le=4096)
     max_tokens_weekly: int = Field(default=500, ge=1, le=4096)
-
-    @model_validator(mode="after")
-    def validate_base_url_for_custom(self) -> "LLMConfig":
-        if self.provider in ("custom", "azure") and not self.base_url:
-            raise ValueError(f"llm.base_url is required when provider is '{self.provider}'")
-        return self
 
 
 class AppSettings(BaseModel):
@@ -88,7 +82,9 @@ class AppSettings(BaseModel):
 
 
 def load_settings(path: str = "config/competitors.yaml") -> AppSettings:
-    """Load and validate YAML configuration."""
+    """Load .env, validate YAML configuration, and return AppSettings."""
+    load_env()
+
     config_path = Path(path)
     if not config_path.exists():
         raise FileNotFoundError(f"config/competitors.yaml not found: {config_path}")
@@ -120,6 +116,8 @@ def reset_settings() -> None:
     """Reset singleton (for tests)."""
     global SETTINGS
     SETTINGS = None
+    from config.env import reset_env_loaded
     from infra.llm.factory import reset_provider
 
+    reset_env_loaded()
     reset_provider()

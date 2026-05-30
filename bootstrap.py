@@ -22,6 +22,10 @@ def main() -> int:
     setup_logging()
     logger = get_logger("bootstrap")
 
+    from infra.llm.factory import log_llm_config
+
+    log_llm_config(settings.llm)
+
     try:
         init_db()
     except SystemExit:

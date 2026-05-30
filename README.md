@@ -65,39 +65,33 @@ competitor-analysis-agent/
 
 ### LLM 后端配置（可插拔）
 
-在 `config/competitors.yaml` 中通过 `llm` 段切换后端，**无需改代码**：
+**YAML 只配 provider 和 model**，密钥与 URL 写在项目根目录 `.env`，启动时自动加载（`python-dotenv`）：
 
 ```yaml
+# config/competitors.yaml
 llm:
-  provider: openai          # openai | deepseek | qwen | moonshot | zhipu | ollama | azure | custom
-  model: gpt-4o-mini
+  provider: qwen
+  model: qwen-plus
 ```
 
-| provider | 环境变量 | 说明 |
-|----------|----------|------|
+```env
+# .env（复制自 .env.example）
+DASHSCOPE_API_KEY=sk-...
+LLM_BASE_URL=          # 可选，覆盖 preset 默认端点；custom/azure 必填
+LLM_API_KEY=           # 可选，preset 专用 Key 为空时的通用 fallback
+```
+
+| provider | .env 密钥变量 | 说明 |
+|----------|---------------|------|
 | `openai` | `OPENAI_API_KEY` | 默认 |
 | `deepseek` | `DEEPSEEK_API_KEY` | DeepSeek |
 | `qwen` | `DASHSCOPE_API_KEY` | 通义千问兼容模式 |
 | `moonshot` | `MOONSHOT_API_KEY` | Kimi |
 | `zhipu` | `ZHIPU_API_KEY` | 智谱 |
-| `ollama` | （无需） | 本地 `http://localhost:11434/v1` |
-| `custom` | 自定义 | 需同时配置 `base_url` 和 `api_key_env` |
+| `ollama` | （无需） | 本地端点，可用 `LLM_BASE_URL` 覆盖 |
+| `custom` / `azure` | `LLM_API_KEY` 或对应 Key | 必须在 `.env` 设置 `LLM_BASE_URL` |
 
-切换示例：
-
-```yaml
-# DeepSeek
-llm:
-  provider: deepseek
-  model: deepseek-chat
-
-# 本地 Ollama
-llm:
-  provider: ollama
-  model: qwen2.5:7b
-```
-
-修改配置后重启进程即可生效。
+启动后日志会输出 `llm_config_ready`（含 `api_key_configured`、脱敏 `base_url`）。若 Key 缺失会 warning，LLM 自动降级为规则提取。
 
 ## 快速开始
 
@@ -122,12 +116,11 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-编辑 `.env`，填入：
+编辑 `.env`（启动时自动加载），填入对应 provider 的 API Key：
 
 ```env
-OPENAI_API_KEY=sk-...        # 默认 LLM（llm.provider: openai）
-DEEPSEEK_API_KEY=            # llm.provider: deepseek
-DASHSCOPE_API_KEY=           # llm.provider: qwen
+DASHSCOPE_API_KEY=sk-...     # llm.provider: qwen
+LLM_BASE_URL=                # 可选；custom/azure 必填
 SEARCH_API_KEY=...           # 关键词搜索（可选，默认关闭）
 ```
 
@@ -226,7 +219,7 @@ pytest tests/test_collect.py -v
 pytest tests/test_pipeline.py -v
 ```
 
-当前共 **70** 项测试。测试使用隔离临时目录，不会污染 `data/` 与 `logs/`。
+当前共 **74** 项测试。测试使用隔离临时目录，不会污染 `data/` 与 `logs/`。
 
 ## 开发进度
 

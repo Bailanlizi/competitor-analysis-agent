@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import time
 
 import openai
@@ -51,6 +50,8 @@ class OpenAICompatProvider:
         return self._model
 
     def is_available(self) -> bool:
+        if self._provider_name in ("custom", "azure") and not self._base_url:
+            return False
         if not self._require_api_key:
             return True
         return bool(self._api_key)
@@ -130,22 +131,3 @@ class OpenAICompatProvider:
             status="success",
         )
         return content, LLMUsage(input_tokens=token_input, output_tokens=token_output)
-
-
-def build_openai_compat_provider(
-    provider_name: str,
-    model: str,
-    api_key_env: str,
-    base_url: str | None,
-    timeout: int,
-) -> OpenAICompatProvider:
-    api_key = os.environ.get(api_key_env, "") if api_key_env else ""
-    require_api_key = provider_name != "ollama"
-    return OpenAICompatProvider(
-        provider_name=provider_name,
-        model=model,
-        api_key=api_key or None,
-        base_url=base_url,
-        timeout=timeout,
-        require_api_key=require_api_key,
-    )

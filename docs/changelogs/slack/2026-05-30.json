@@ -1,0 +1,72 @@
+[
+  {
+    "id": "c371be306550",
+    "title": "New Block Kit data table block",
+    "summary": "The data table block is now available for use with Block Kit.",
+    "source_url": "https://docs.slack.dev/changelog/2026/05/20/block-kit-more-new-blocks",
+    "discovered_at": "2026-05-30T08:30:44Z"
+  },
+  {
+    "id": "f5ce7c188ba7",
+    "title": "Release: Slack CLI v4.1.0",
+    "summary": "Version 4.1.0 of the Slack CLI has landed!",
+    "source_url": "https://docs.slack.dev/changelog/2026/05/19/slack-cli",
+    "discovered_at": "2026-05-30T08:30:44Z"
+  },
+  {
+    "id": "e5dc17b8b245",
+    "title": "New Slack MCP Server tools released",
+    "summary": "We've added the following tools to the Slack MCP server:",
+    "source_url": "https://docs.slack.dev/changelog/2026/05/13/new-mcp-tools",
+    "discovered_at": "2026-05-30T08:30:44Z"
+  },
+  {
+    "id": "24136954a74d",
+    "title": "New Block Kit blocks and Streaming API method upda",
+    "summary": "The following new blocks are now available when using Block Kit:",
+    "source_url": "https://docs.slack.dev/changelog/2026/04/16/block-kit-new-blocks",
+    "discovered_at": "2026-05-30T08:30:44Z"
+  },
+  {
+    "id": "04df1fc79fe4",
+    "title": "Release: Slack CLI v4.0.0 and v4.0.1",
+    "summary": "Version 4.0.0 of the developer tools for the Slack platform has arrived with lots of goodies for you",
+    "source_url": "https://docs.slack.dev/changelog/2026/04/10/slack-cli",
+    "discovered_at": "2026-05-30T08:30:44Z"
+  },
+  {
+    "id": "6be516e91213",
+    "title": "Optional scopes have landed",
+    "summary": "You can now mark individual OAuth scopes as optional when configuring your Slack app! Optional scope",
+    "source_url": "https://docs.slack.dev/changelog/2026/03/16/optional-scopes",
+    "discovered_at": "2026-05-30T08:30:44Z"
+  },
+  {
+    "id": "08ab819ba7f8",
+    "title": "New supported markdown types for rich text in Bloc",
+    "summary": "The following new supported markdown types for rich text when using Block Kit in your apps are being",
+    "source_url": "https://docs.slack.dev/changelog/2026/03/06/block-kit-rich-text",
+    "discovered_at": "2026-05-30T08:30:45Z"
+  },
+  {
+    "id": "41a92d7d97a3",
+    "title": "Set status method scope update",
+    "summary": "The assistant.threads.setStatus API method now accepts either the assistantwrite scope. This allows ",
+    "source_url": "https://docs.slack.dev/changelog/2026/03/05/set-status-scope-update",
+    "discovered_at": "2026-05-30T08:30:45Z"
+  },
+  {
+    "id": "316f92f46a4c",
+    "title": "Slack CLI v3.15.0 发布",
+    "summary": "Slack 平台开发者工具 CLI 更新至 v3.15.0。",
+    "source_url": "https://docs.slack.dev/changelog/2026/03/19/slack-cli",
+    "discovered_at": "2026-05-30T08:49:38Z"
+  },
+  {
+    "id": "093b0d025265",
+    "title": "Slack CLI v4.1.0 发布",
+    "summary": "Slack CLI 工具更新至 4.1.0 版本。",
+    "source_url": "https://docs.slack.dev/changelog/2026/05/19/slack-cli",
+    "discovered_at": "2026-05-30T11:34:20Z"
+  }
+]

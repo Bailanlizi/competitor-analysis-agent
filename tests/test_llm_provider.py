@@ -6,10 +6,17 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pydantic import ValidationError
 
 from config.settings import LLMConfig, load_settings, reset_settings
-from infra.llm.factory import PRESETS, create_provider, get_provider, reset_provider
+from infra.llm.factory import (
+    LLM_API_KEY_FALLBACK_ENV,
+    LLM_BASE_URL_ENV,
+    PRESETS,
+    create_provider,
+    get_provider,
+    resolve_llm_credentials,
+    reset_provider,
+)
 
 
 def test_llm_defaults():
@@ -17,18 +24,6 @@ def test_llm_defaults():
     assert cfg.provider == "openai"
     assert cfg.model == "gpt-4o-mini"
     assert cfg.timeout == 30
-
-
-def test_custom_provider_requires_base_url():
-    with pytest.raises(ValidationError) as exc_info:
-        LLMConfig(provider="custom", model="my-model")
-    assert "base_url" in str(exc_info.value)
-
-
-def test_azure_provider_requires_base_url():
-    with pytest.raises(ValidationError) as exc_info:
-        LLMConfig(provider="azure", model="gpt-4o")
-    assert "base_url" in str(exc_info.value)
 
 
 def test_deepseek_preset(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -47,6 +42,35 @@ def test_deepseek_preset(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     assert PRESETS["deepseek"].base_url == "https://api.deepseek.com"
 
 
+def test_llm_api_key_fallback(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv(LLM_API_KEY_FALLBACK_ENV, "fallback-key")
+    creds = resolve_llm_credentials(LLMConfig(provider="openai", model="gpt-4o-mini"))
+    assert creds.api_key == "fallback-key"
+    provider = create_provider(LLMConfig(provider="openai", model="gpt-4o-mini"))
+    assert provider.is_available()
+
+
+def test_llm_base_url_env_override(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv(LLM_BASE_URL_ENV, "https://custom.example.com/v1")
+    creds = resolve_llm_credentials(LLMConfig(provider="qwen", model="qwen-plus"))
+    assert creds.base_url == "https://custom.example.com/v1"
+
+
+def test_custom_unavailable_without_base_url(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv(LLM_BASE_URL_ENV, raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    provider = create_provider(LLMConfig(provider="custom", model="my-model"))
+    assert not provider.is_available()
+
+
+def test_custom_available_with_base_url_env(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv(LLM_BASE_URL_ENV, "https://gateway.example.com/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    provider = create_provider(LLMConfig(provider="custom", model="my-model"))
+    assert provider.is_available()
+
+
 def test_ollama_available_without_api_key():
     provider = create_provider(LLMConfig(provider="ollama", model="qwen2.5:7b"))
     assert provider.is_available()
@@ -54,7 +78,7 @@ def test_ollama_available_without_api_key():
 
 def test_get_provider_singleton(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     reset_settings()
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "sk-test")
     data = yaml.safe_load(Path("config/competitors.yaml").read_text(encoding="utf-8"))
     path = tmp_path / "cfg.yaml"
     path.write_text(yaml.dump(data), encoding="utf-8")
@@ -71,5 +95,6 @@ def test_get_provider_singleton(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
 
 def test_openai_unavailable_without_key(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv(LLM_API_KEY_FALLBACK_ENV, raising=False)
     provider = create_provider(LLMConfig())
     assert not provider.is_available()

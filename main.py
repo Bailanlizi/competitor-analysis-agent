@@ -14,6 +14,9 @@ from scheduler import create_scheduler, start_scheduler
 
 async def _run(settings) -> None:
     setup_logging()
+    from infra.llm.factory import log_llm_config
+
+    log_llm_config(settings.llm)
     init_db()
     scheduler = create_scheduler(settings)
     start_scheduler(scheduler)

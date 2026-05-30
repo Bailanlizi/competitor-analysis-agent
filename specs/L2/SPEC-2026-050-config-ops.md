@@ -1,7 +1,7 @@
 ---
 title: "配置与运维中心"
 spec_id: "SPEC-2026-050"
-version: "1.3"
+version: "1.4"
 status: implemented
 author: "Product Team"
 created: "2026-05-30"
@@ -64,18 +64,14 @@ timezone: "Asia/Shanghai"     # IANA 时区
 feishu_webhook: ""            # 飞书机器人 Webhook URL
 dingtalk_webhook: ""          # 钉钉机器人 Webhook URL（可选）
 
-# LLM 后端配置（Must）
+# LLM 后端配置（Must）— YAML 仅 provider + model
 llm:
-  provider: openai            # openai | deepseek | qwen | moonshot | zhipu | ollama | azure | custom
-  model: gpt-4o-mini          # 模型 ID
-  api_key_env: ""             # 可选，覆盖 preset 默认环境变量名
-  base_url: ""                # custom/azure 必填；其他 provider 可选覆盖
-  timeout: 30
-  max_tokens_extract: 500
-  max_tokens_summary: 200
-  max_tokens_weekly: 500
+  provider: qwen
+  model: qwen-plus
+  timeout: 30                 # 可选
+  max_tokens_extract: 500       # 可选
 
-# 搜索 API 配置（Should）
+# 密钥与 URL 写在 .env，启动时 load_settings() 自动 load_dotenv
 search:
   enabled: false
   provider: "serpapi"           # serpapi | bing | google
@@ -148,11 +144,9 @@ class SearchConfig(BaseModel):
     max_results: int = Field(default=5, ge=1, le=20)
 
 class LLMConfig(BaseModel):
-    provider: Literal["openai","deepseek","qwen","moonshot","zhipu","ollama","azure","custom"] = "openai"
+    provider: Literal["openai","deepseek","qwen",...] = "openai"
     model: str = "gpt-4o-mini"
-    api_key_env: str = ""
-    base_url: str = ""
-    timeout: int = Field(default=30, ge=5, le=120)
+    timeout: int = 30
     max_tokens_extract: int = 500
     max_tokens_summary: int = 200
     max_tokens_weekly: int = 500
@@ -215,20 +209,21 @@ def load_settings(path: str = "config/competitors.yaml") -> AppSettings:
 #### L3-5.1.3 LLM 后端配置 [Must]
 
 **行为：**
-- `llm.provider` 选择预设后端，通过 `infra/llm/factory.py` PRESETS 注册表解析 `base_url` 与 `api_key_env`
-- API Key **仅从环境变量**读取（按 preset 或 `api_key_env` 覆盖），禁止写入 YAML
-- 切换 provider 仅需修改 YAML + 环境变量，**零代码变更**
-- `provider: custom` 或 `azure` 时 `base_url` 必填，否则 ValidationError
+- YAML 仅配置 `llm.provider` 与 `llm.model`（及可选 timeout / max_tokens）
+- 启动时 `load_settings()` 调用 `config/env.py` 的 `load_dotenv()` 加载项目根 `.env`
+- API Key 由 PRESETS 映射到环境变量（如 qwen → `DASHSCOPE_API_KEY`）；可选 fallback `LLM_API_KEY`
+- Base URL 优先级：`LLM_BASE_URL` 环境变量 > preset 默认值；custom/azure 无 URL 时 Provider 不可用
+- 禁止将 Key 写入 YAML；启动日志 `llm_config_ready` 报告就绪状态（Key 不明文输出）
 
-| provider | 默认 base_url | 默认 api_key_env |
-|----------|---------------|------------------|
-| openai | SDK 默认 | OPENAI_API_KEY |
-| deepseek | https://api.deepseek.com | DEEPSEEK_API_KEY |
-| qwen | DashScope 兼容端点 | DASHSCOPE_API_KEY |
-| moonshot | https://api.moonshot.cn/v1 | MOONSHOT_API_KEY |
-| zhipu | 智谱 OpenAI 兼容端点 | ZHIPU_API_KEY |
-| ollama | http://localhost:11434/v1 | （无需 Key） |
-| azure / custom | 用户配置 | 可配置 |
+| provider | preset 密钥变量 | 默认 base_url |
+|----------|-----------------|---------------|
+| openai | OPENAI_API_KEY | SDK 默认 |
+| deepseek | DEEPSEEK_API_KEY | api.deepseek.com |
+| qwen | DASHSCOPE_API_KEY | DashScope 兼容端点 |
+| moonshot | MOONSHOT_API_KEY | api.moonshot.cn |
+| zhipu | ZHIPU_API_KEY | 智谱 OpenAI 兼容端点 |
+| ollama | （无需） | localhost:11434 |
+| azure / custom | AZURE_OPENAI_API_KEY 或 LLM_API_KEY | 需 `LLM_BASE_URL` |
 
 #### L3-5.2.1 Webhook 配置管理 [Should]
 
@@ -308,8 +303,8 @@ flowchart TD
 | 日志框架 | structlog ≥ 24.0 |
 | 日志格式 | JSON Lines（每行一条） |
 | 配置文件路径 | `config/competitors.yaml`（硬编码，V1 不支持自定义路径） |
-| 环境变量 | LLM：`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `DASHSCOPE_API_KEY` 等（按 preset）；`SEARCH_API_KEY`（搜索，可选） |
-| LLM 切换 | 修改 `llm.provider` + 对应环境变量，重启进程；零代码变更 |
+| 环境变量 | LLM 密钥（按 preset）；`LLM_BASE_URL`（可选覆盖）；`LLM_API_KEY`（fallback）；`SEARCH_API_KEY`（搜索） |
+| .env 加载 | `python-dotenv`，`load_settings()` 入口自动执行 |
 | 竞品数量 | 固定 3 个，不多不少 |
 
 ## 5. Error Handling 异常错误处理
@@ -379,11 +374,11 @@ flowchart TD
 - When：调用 `create_provider(settings.llm)`
 - Then：`provider_name == "deepseek"`；`is_available()` 为 True
 
-**AC-10：custom 缺 base_url**
+**AC-10：custom/azure 缺 LLM_BASE_URL**
 
-- Given：`llm.provider: custom`，`base_url` 为空
-- When：调用 load_settings()
-- Then：ValidationError，提示 base_url 必填
+- Given：`llm.provider: custom`，`.env` 未设置 `LLM_BASE_URL`
+- When：调用 `create_provider()`
+- Then：`is_available()` 为 False；日志 `llm_base_url_missing`
 
 **AC-11：llm_call 日志含 provider**
 
@@ -405,7 +400,7 @@ flowchart TD
 
 | # | 问题 | 建议 |
 |---|------|------|
-| Q-1 | 是否支持 .env 文件加载环境变量 | 建议使用 python-dotenv，非 V1 必须 |
+| Q-1 | 是否支持 .env 文件加载环境变量 | **已实现**：`config/env.py` + python-dotenv |
 | Q-2 | 配置文件是否支持 config.local.yaml 覆盖 | V1 不支持，V2 考虑 |
 
 ## 9. Changelog 变更履历
@@ -413,5 +408,6 @@ flowchart TD
 | 日期 | 版本 | 修改内容 | 修改人 |
 |------|------|----------|--------|
 | 2026-05-30 | 1.0 | 初稿创建 | Product Team |
+| 2026-05-30 | 1.4 | YAML 极简 LLM 配置 + .env 自动加载；移除 api_key_env/base_url | Product Team |
 | 2026-05-30 | 1.3 | LLM 可插拔后端配置 L3-5.1.3；AC-9~11 | Product Team |
 | 2026-05-30 | 1.2 | P1：新增 cold_start_days 配置项（默认 7） | Product Team |
