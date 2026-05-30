@@ -4,6 +4,12 @@ timezone: "Asia/Shanghai"
 feishu_webhook: ""
 dingtalk_webhook: ""
 
+llm:
+  provider: openai
+  model: gpt-4o-mini
+  # api_key_env: OPENAI_API_KEY   # optional override
+  # base_url: ""                  # required for custom/azure
+
 search:
   enabled: false
   provider: "serpapi"

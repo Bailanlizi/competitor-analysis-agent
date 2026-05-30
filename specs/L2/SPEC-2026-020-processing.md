@@ -1,7 +1,7 @@
 ---
 title: "情报处理中心"
 spec_id: "SPEC-2026-020"
-version: "1.2"
+version: "1.3"
 status: implemented
 author: "Product Team"
 created: "2026-05-30"
@@ -145,15 +145,15 @@ def clean_content(content: str) -> str:
 {{ content[:3000] }}
 ```
 
-#### L3-2.2.2 OpenAI API 客户端封装 [Must]
+#### L3-2.2.2 LLM Provider 调用（via infra/llm）[Must]
 
 **行为：**
-- 使用 openai.AsyncOpenAI 客户端
-- 模型：gpt-4o-mini
-- 参数：`response_format={"type": "json_object"}`, `max_tokens=500`, `timeout=30`
+- 调用 `infra/llm.extract(raw)` 门面；底层 Provider/model 由 SPEC-2026-050 `llm` 配置决定
+- Provider 在 `json_mode=True` 时使用 `response_format={"type": "json_object"}`（不支持时适配器降级）
+- 参数：`max_tokens` 来自 `llm.max_tokens_extract`，`timeout` 来自 `llm.timeout`
 - 应用 SPEC-2026-060 重试策略（429/超时重试 2 次）
-- 每次调用记录日志：`llm_call`，含 input_tokens, output_tokens, model, duration_ms
-- API Key 从环境变量 `OPENAI_API_KEY` 读取
+- 每次调用记录日志：`llm_call`，含 provider、model、input_tokens、output_tokens、duration_ms
+- API Key 从环境变量读取（按 `llm.api_key_env` 或 preset 默认），禁止写入 YAML
 
 #### L3-2.2.3 结构化情报提取 [Must]
 
@@ -341,8 +341,8 @@ async def process(raw: RawDoc) -> Intel | None:
 
 | 约束 | 值 |
 |------|-----|
-| LLM 模型 | gpt-4o-mini |
-| LLM 超时 | 30s/次 |
+| LLM 后端 | 可配置（默认 openai / gpt-4o-mini，见 SPEC-2026-050） |
+| LLM 超时 | 来自 `llm.timeout` 配置（默认 30s/次） |
 | LLM 输入截断 | content[:3000] |
 | 去重相似度阈值 | 0.85（> 0.85 判重复） |
 | Pre-LLM URL 去重 | process 阶段 rss/search；`intel_url_exists` 排除 rejected |
@@ -464,7 +464,7 @@ async def process(raw: RawDoc) -> Intel | None:
 | 韧性 Spec | SPEC-2026-060（LLM 降级、去重超时） |
 | 存储 Spec | SPEC-2026-070（save_intel、历史查询） |
 | 推送 Spec | SPEC-2026-030（confidence 路由） |
-| 代码文件 | `intel/process.py`, `infra/llm.py`, `prompts/v1/extract.j2` |
+| 代码文件 | `intel/process.py`, `infra/llm/`, `prompts/v1/extract.j2` |
 
 ## 8. Open Questions 待定问题
 
@@ -479,4 +479,5 @@ async def process(raw: RawDoc) -> Intel | None:
 |------|------|----------|--------|
 | 2026-05-30 | 1.0 | 初稿创建 | Product Team |
 | 2026-05-30 | 1.1 | P0 修订：Pre-LLM 预去重；URL 查 intel 表；HTTP 用 content_hash | Product Team |
+| 2026-05-30 | 1.3 | LLM 可插拔 Provider；L3-2.2.2 重构 | Product Team |
 | 2026-05-30 | 1.2 | P0/P1：HTTP 预去重移至 collect；extracted_by；push 边界；rejected 可重采 | Product Team |

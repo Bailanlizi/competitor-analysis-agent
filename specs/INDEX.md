@@ -44,8 +44,8 @@
 | Spec 状态 = implemented | 7 |
 | 实现状态 = 未开始 | 0 |
 | 实现状态 = 已完成 | 7 |
-| 验收标准（AC）合计 | 87 |
-| Must L3 合计 | 38 |
+| 验收标准（AC）合计 | 90 |
+| Must L3 合计 | 40 |
 | Should L3 合计 | 12 |
 
 **当前阶段：** M6 周报与调度已完成（040 + scheduler）；下一步 M7 端到端验收。
@@ -56,16 +56,16 @@
 
 | Spec ID | 标题 | 层级 | 文件 | 版本 | Spec 状态 | 实现状态 | 优先级 | AC | Must | Should | 依赖 | 更新 |
 |---------|------|------|------|------|-----------|----------|--------|----|------|--------|------|------|
-| [SPEC-2026-001](L1/SPEC-2026-001-system.md) | 竞品情报 Agent 系统 | L1 | `L1/SPEC-2026-001-system.md` | 1.2 | draft | 未开始 | P0 | 8 | — | — | — | 2026-05-30 |
+| [SPEC-2026-001](L1/SPEC-2026-001-system.md) | 竞品情报 Agent 系统 | L1 | `L1/SPEC-2026-001-system.md` | 1.3 | draft | 未开始 | P0 | 8 | — | — | — | 2026-05-30 |
 | [SPEC-2026-070](L2/SPEC-2026-070-storage.md) | 存储治理系统 | L2 | `L2/SPEC-2026-070-storage.md` | 1.2 | implemented | 已完成 | P0 | 10 | 5 | 1 | 001 | 2026-05-30 |
-| [SPEC-2026-050](L2/SPEC-2026-050-config-ops.md) | 配置与运维中心 | L2 | `L2/SPEC-2026-050-config-ops.md` | 1.2 | implemented | 已完成 | P0 | 8 | 3 | 3 | 001 | 2026-05-30 |
-| [SPEC-2026-060](L2/SPEC-2026-060-resilience.md) | 韧性保障系统 | L2 | `L2/SPEC-2026-060-resilience.md` | 1.0 | implemented | 已完成 | P0 | 9 | 4 | 4 | 001, 070 | 2026-05-30 |
+| [SPEC-2026-050](L2/SPEC-2026-050-config-ops.md) | 配置与运维中心 | L2 | `L2/SPEC-2026-050-config-ops.md` | 1.3 | implemented | 已完成 | P0 | 11 | 4 | 3 | 001 | 2026-05-30 |
+| [SPEC-2026-060](L2/SPEC-2026-060-resilience.md) | 韧性保障系统 | L2 | `L2/SPEC-2026-060-resilience.md` | 1.1 | implemented | 已完成 | P0 | 9 | 5 | 4 | 001, 070 | 2026-05-30 |
 | [SPEC-2026-010](L2/SPEC-2026-010-collection.md) | 情报采集引擎 | L2 | `L2/SPEC-2026-010-collection.md` | 1.2 | implemented | 已完成 | P0 | 16 | 7 | 1 | 001, 050, 060, 070 | 2026-05-30 |
-| [SPEC-2026-020](L2/SPEC-2026-020-processing.md) | 情报处理中心 | L2 | `L2/SPEC-2026-020-processing.md` | 1.2 | implemented | 已完成 | P0 | 15 | 9 | 0 | 001, 060, 070 | 2026-05-30 |
+| [SPEC-2026-020](L2/SPEC-2026-020-processing.md) | 情报处理中心 | L2 | `L2/SPEC-2026-020-processing.md` | 1.3 | implemented | 已完成 | P0 | 15 | 9 | 0 | 001, 060, 070 | 2026-05-30 |
 | [SPEC-2026-030](L2/SPEC-2026-030-push.md) | 推送网关 | L2 | `L2/SPEC-2026-030-push.md` | 1.2 | implemented | 已完成 | P0 | 10 | 4 | 1 | 001, 050, 060, 070 | 2026-05-30 |
-| [SPEC-2026-040](L2/SPEC-2026-040-weekly.md) | 周报工厂 | L2 | `L2/SPEC-2026-040-weekly.md` | 1.1 | implemented | 已完成 | P0 | 11 | 6 | 2 | 001, 020, 030, 070 | 2026-05-30 |
+| [SPEC-2026-040](L2/SPEC-2026-040-weekly.md) | 周报工厂 | L2 | `L2/SPEC-2026-040-weekly.md` | 1.2 | implemented | 已完成 | P0 | 11 | 6 | 2 | 001, 020, 030, 070 | 2026-05-30 |
 
-> **版本说明：** 040 仍为 v1.1，其余核心 Spec 已升至 v1.2（P0/P1 修订）。060 尚未同步 v1.2 交叉引用修订。
+> **版本说明：** 001/050/020/040/060 已对齐 LLM 可插拔 Provider 架构（v1.1–1.3）。
 
 ---
 
@@ -77,7 +77,7 @@
 |------|---------|------|----------|-----------|----------|--------|
 | 1 | SPEC-2026-070 | 存储治理 | `infra/db.py`, `models.py` | implemented | 已完成 | — |
 | 2 | SPEC-2026-050 | 配置运维 | `config/settings.py`, `infra/log.py` | implemented | 已完成 | — |
-| 3 | SPEC-2026-060 | 韧性保障 | `infra/http.py`, `infra/llm.py` | implemented | 已完成 | — |
+| 3 | SPEC-2026-060 | 韧性保障 | `infra/http.py`, `infra/llm/` | implemented | 已完成 | — |
 | 4 | SPEC-2026-010 | 情报采集 | `intel/collect.py` | implemented | 已完成 | — |
 | 5 | SPEC-2026-020 | 情报处理 | `intel/process.py`, `prompts/v1/extract.j2` | implemented | 已完成 | — |
 | 6 | SPEC-2026-030 | 推送网关 | `intel/push.py` | implemented | 已完成 | — |
@@ -104,8 +104,8 @@
 
 | # | 类型 | 关联 Spec | 描述 | 状态 |
 |---|------|-----------|------|------|
-| 1 | 版本对齐 | 040, 060 | 040 升至 v1.2；060 补充 extracted_by / push 边界交叉引用 | open |
-| 2 | 评审 | 001, 010~040, 060 | 其余 Spec 待实现 | open |
+| 1 | 版本对齐 | — | 040/060 版本对齐已完成 | closed |
+| 2 | 评审 | 001 | L1 系统 Spec 整体仍为 draft | open |
 | 3 | Should 项 | 050, 070 | 日志轮转、审核 CLI、failed_push 定时清理 | open |
 
 ---
@@ -124,4 +124,5 @@
 | 日期 | 变更 | 操作人 |
 |------|------|--------|
 | 2026-05-30 | 创建 INDEX.md，初始化 8 份 Spec 状态追踪 | Product Team |
+| 2026-05-30 | LLM 可插拔 Provider：infra/llm/ 包 + Spec 对齐；70 pytest | Product Team |
 | 2026-05-30 | M6 完成：040 周报工厂 + scheduler/main；62 pytest | Product Team |

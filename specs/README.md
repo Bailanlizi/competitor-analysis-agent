@@ -112,10 +112,12 @@ graph TD
 | L3-4.3.2 | 040 | Markdown 周报推送 |
 | L3-5.1.1 | 050 | YAML 配置 Schema 定义 |
 | L3-5.1.2 | 050 | 配置加载与生效 |
+| L3-5.1.3 | 050 | LLM 后端配置 |
 | L3-5.3.1 | 050 | 结构化日志 |
 | L3-6.1.1 | 060 | 网络超时重试 |
 | L3-6.1.2 | 060 | HTTP 状态码分层 |
-| L3-6.2.1 | 060 | LLM 超时/限流重试 |
+| L3-6.2.0 | 060 | LLM Provider 抽象层 |
+| L3-6.2.1 | 060 | LLM API 重试（Provider 层） |
 | L3-6.2.2 | 060 | 规则提取降级 |
 | L3-7.1.1 | 070 | SQLite 初始化 |
 | L3-7.1.2 | 070 | 情报表 CRUD 接口 |
@@ -148,7 +150,7 @@ graph TD
 |------|------|----------|------|
 | 1 | 070 存储 | `infra/db.py`, `models.py` | 数据底座 |
 | 2 | 050 配置 | `config/settings.py`, `config/competitors.yaml`, `infra/log.py` | 配置加载 |
-| 3 | 060 韧性 | `infra/llm.py`（重试+降级） | 横切能力 |
+| 3 | 060 韧性 | `infra/llm/`（Provider + 重试 + 降级） | 横切能力 |
 | 4 | 010 采集 | `intel/collect.py` | 流水线起点 |
 | 5 | 020 处理 | `intel/process.py`, `prompts/v1/extract.j2` | 核心处理 |
 | 6 | 030 推送 | `intel/push.py` | 输出通道 |
@@ -219,7 +221,7 @@ graph TD
 | `intel/push.py` | 030 |
 | `intel/weekly.py` | 040 |
 | `infra/db.py` | 070 |
-| `infra/llm.py` | 020, 060 |
+| `infra/llm/` | 020, 040, 050, 060 |
 | `infra/log.py` | 050 |
 | `prompts/v1/extract.j2` | 020 |
 | `prompts/v1/weekly_summary.j2` | 040 |

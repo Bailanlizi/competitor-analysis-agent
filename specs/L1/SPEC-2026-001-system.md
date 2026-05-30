@@ -1,7 +1,7 @@
 ---
 title: "竞品情报 Agent 系统"
 spec_id: "SPEC-2026-001"
-version: "1.2"
+version: "1.3"
 status: draft
 author: "Product Team"
 created: "2026-05-30"
@@ -252,7 +252,12 @@ competitor-intel/
 ├── infra/
 │   ├── __init__.py
 │   ├── db.py                       # SQLite：连接 + CRUD
-│   ├── llm.py                      # OpenAI：重试 + Token + 降级
+│   ├── llm/                        # LLM 可插拔层：Provider + 降级
+│   │   ├── base.py                 # LLMProvider Protocol
+│   │   ├── factory.py              # preset 注册 + create_provider
+│   │   ├── fallback.py             # 规则降级
+│   │   └── providers/
+│   │       └── openai_compat.py    # OpenAI 兼容适配器
 │   └── log.py                      # structlog：结构化 JSON 日志
 ├── prompts/
 │   └── v1/
@@ -378,7 +383,7 @@ stateDiagram-v2
 | HTML 备用解析 | beautifulsoup4 | ≥ 4.12.0 |
 | 数据校验 | pydantic + pydantic-settings | ≥ 2.0.0 |
 | YAML 解析 | pyyaml | ≥ 6.0.0 |
-| LLM | openai (GPT-4o-mini) | ≥ 1.0.0 |
+| LLM | OpenAI 兼容 SDK + 可插拔 Provider（默认 openai/gpt-4o-mini） | ≥ 1.0.0 |
 | 结构化日志 | structlog | ≥ 24.0.0 |
 | 定时调度 | apscheduler | ≥ 3.10.0 |
 | 重试 | tenacity | ≥ 8.0.0 |
@@ -398,7 +403,7 @@ stateDiagram-v2
 
 **安全规范：**
 
-- API Key（OpenAI）通过环境变量 `OPENAI_API_KEY` 注入，禁止写入配置文件或日志
+- LLM API Key 按 `llm.api_key_env` 从环境变量注入，禁止写入 YAML 或日志
 - Webhook URL 仅存于 `competitors.yaml`，日志中脱敏显示（仅保留末 4 位）
 - 所有时间戳统一 **UTC ISO8601（Z 后缀）** 存储（见 §3.8）；展示时按 `timezone` 配置转换
 
@@ -500,4 +505,5 @@ stateDiagram-v2
 |------|------|----------|--------|
 | 2026-05-30 | 1.0 | 初稿创建 | Product Team |
 | 2026-05-30 | 1.1 | P0 修订：时区规范 §3.8；调度任务注册表 §3.9；Pre-LLM 去重规则 | Product Team |
+| 2026-05-30 | 1.3 | LLM 可插拔 Provider 架构 | Product Team |
 | 2026-05-30 | 1.2 | P0/P1：Intel 状态机 §3.10；HTTP 采集阶段去重；push 编排边界；rejected 可重采；冷启动 | Product Team |

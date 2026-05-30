@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from freezegun import freeze_time
@@ -173,8 +173,11 @@ def test_ac6_render_weekly_markdown():
 async def test_ac9_generate_and_push_archives(tmp_env):
     save_intel(_make_intel(id="w1"))
     settings = _settings()
+    mock_provider = MagicMock()
+    mock_provider.is_available.return_value = False
     with patch("intel.weekly.push.push_weekly_report", new_callable=AsyncMock, return_value=True):
-        weekly = await generate_and_push(settings.feishu_webhook, settings)
+        with patch("infra.llm.get_provider", return_value=mock_provider):
+            weekly = await generate_and_push(settings.feishu_webhook, settings)
     report_path = tmp_env["reports"] / f"{weekly.week_start}.md"
     assert report_path.exists()
     assert report_path.read_text(encoding="utf-8") == weekly.content

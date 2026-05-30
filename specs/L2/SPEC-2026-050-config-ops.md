@@ -1,7 +1,7 @@
 ---
 title: "配置与运维中心"
 spec_id: "SPEC-2026-050"
-version: "1.2"
+version: "1.3"
 status: implemented
 author: "Product Team"
 created: "2026-05-30"
@@ -63,6 +63,17 @@ cold_start_days: 7            # RSS 冷启动窗口，仅处理 N 天内 publish
 timezone: "Asia/Shanghai"     # IANA 时区
 feishu_webhook: ""            # 飞书机器人 Webhook URL
 dingtalk_webhook: ""          # 钉钉机器人 Webhook URL（可选）
+
+# LLM 后端配置（Must）
+llm:
+  provider: openai            # openai | deepseek | qwen | moonshot | zhipu | ollama | azure | custom
+  model: gpt-4o-mini          # 模型 ID
+  api_key_env: ""             # 可选，覆盖 preset 默认环境变量名
+  base_url: ""                # custom/azure 必填；其他 provider 可选覆盖
+  timeout: 30
+  max_tokens_extract: 500
+  max_tokens_summary: 200
+  max_tokens_weekly: 500
 
 # 搜索 API 配置（Should）
 search:
@@ -136,6 +147,16 @@ class SearchConfig(BaseModel):
     keywords: list[str] = []
     max_results: int = Field(default=5, ge=1, le=20)
 
+class LLMConfig(BaseModel):
+    provider: Literal["openai","deepseek","qwen","moonshot","zhipu","ollama","azure","custom"] = "openai"
+    model: str = "gpt-4o-mini"
+    api_key_env: str = ""
+    base_url: str = ""
+    timeout: int = Field(default=30, ge=5, le=120)
+    max_tokens_extract: int = 500
+    max_tokens_summary: int = 200
+    max_tokens_weekly: int = 500
+
 class AppSettings(BaseSettings):
     interval_minutes: int = Field(default=60, ge=15, le=120)
     cold_start_days: int = Field(default=7, ge=1, le=30)
@@ -143,6 +164,7 @@ class AppSettings(BaseSettings):
     feishu_webhook: str = ""
     dingtalk_webhook: str = ""
     search: SearchConfig = SearchConfig()
+    llm: LLMConfig = Field(default_factory=LLMConfig)
     competitors: list[CompetitorConfig] = Field(min_length=3, max_length=3)
 
     @field_validator("competitors")
@@ -189,6 +211,24 @@ def load_settings(path: str = "config/competitors.yaml") -> AppSettings:
 **边界：**
 - 配置文件不存在 → 报错 "config/competitors.yaml not found"，exit(1)
 - YAML 语法错误 → 报错具体行号
+
+#### L3-5.1.3 LLM 后端配置 [Must]
+
+**行为：**
+- `llm.provider` 选择预设后端，通过 `infra/llm/factory.py` PRESETS 注册表解析 `base_url` 与 `api_key_env`
+- API Key **仅从环境变量**读取（按 preset 或 `api_key_env` 覆盖），禁止写入 YAML
+- 切换 provider 仅需修改 YAML + 环境变量，**零代码变更**
+- `provider: custom` 或 `azure` 时 `base_url` 必填，否则 ValidationError
+
+| provider | 默认 base_url | 默认 api_key_env |
+|----------|---------------|------------------|
+| openai | SDK 默认 | OPENAI_API_KEY |
+| deepseek | https://api.deepseek.com | DEEPSEEK_API_KEY |
+| qwen | DashScope 兼容端点 | DASHSCOPE_API_KEY |
+| moonshot | https://api.moonshot.cn/v1 | MOONSHOT_API_KEY |
+| zhipu | 智谱 OpenAI 兼容端点 | ZHIPU_API_KEY |
+| ollama | http://localhost:11434/v1 | （无需 Key） |
+| azure / custom | 用户配置 | 可配置 |
 
 #### L3-5.2.1 Webhook 配置管理 [Should]
 
@@ -253,7 +293,8 @@ flowchart TD
     Validate -->|失败| Exit[exit 1 输出错误]
     Validate -->|成功| InitLog[初始化 structlog]
     InitLog --> Ready[SETTINGS 全局可用]
-    Ready --> CollectJob[采集任务读取配置]
+    Ready --> LLMProvider[初始化 LLMProvider]
+    LLMProvider --> CollectJob
     Ready --> PushJob[推送任务读取 Webhook]
     Ready --> ReviewCLI[人工审核 CLI]
 ```
@@ -267,7 +308,8 @@ flowchart TD
 | 日志框架 | structlog ≥ 24.0 |
 | 日志格式 | JSON Lines（每行一条） |
 | 配置文件路径 | `config/competitors.yaml`（硬编码，V1 不支持自定义路径） |
-| 环境变量 | `OPENAI_API_KEY`（LLM）、`SEARCH_API_KEY`（搜索，可选） |
+| 环境变量 | LLM：`OPENAI_API_KEY` / `DEEPSEEK_API_KEY` / `DASHSCOPE_API_KEY` 等（按 preset）；`SEARCH_API_KEY`（搜索，可选） |
+| LLM 切换 | 修改 `llm.provider` + 对应环境变量，重启进程；零代码变更 |
 | 竞品数量 | 固定 3 个，不多不少 |
 
 ## 5. Error Handling 异常错误处理
@@ -331,6 +373,24 @@ flowchart TD
 - When：执行采集任务
 - Then：仅采集 competitor_a 和 competitor_c；日志中 competitor_b 不出现
 
+**AC-9：LLM provider 切换**
+
+- Given：`llm.provider: deepseek`，环境变量 `DEEPSEEK_API_KEY` 已设置
+- When：调用 `create_provider(settings.llm)`
+- Then：`provider_name == "deepseek"`；`is_available()` 为 True
+
+**AC-10：custom 缺 base_url**
+
+- Given：`llm.provider: custom`，`base_url` 为空
+- When：调用 load_settings()
+- Then：ValidationError，提示 base_url 必填
+
+**AC-11：llm_call 日志含 provider**
+
+- Given：LLM 调用成功
+- When：查看日志
+- Then：`llm_call` 事件含 `provider`、`model`、`token_input`、`token_output`
+
 ## 7. Context References 参考依赖
 
 | 类型 | 引用 |
@@ -353,4 +413,5 @@ flowchart TD
 | 日期 | 版本 | 修改内容 | 修改人 |
 |------|------|----------|--------|
 | 2026-05-30 | 1.0 | 初稿创建 | Product Team |
+| 2026-05-30 | 1.3 | LLM 可插拔后端配置 L3-5.1.3；AC-9~11 | Product Team |
 | 2026-05-30 | 1.2 | P1：新增 cold_start_days 配置项（默认 7） | Product Team |

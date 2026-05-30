@@ -1,7 +1,7 @@
 ---
 title: "周报工厂"
 spec_id: "SPEC-2026-040"
-version: "1.1"
+version: "1.2"
 status: implemented
 author: "Product Team"
 created: "2026-05-30"
@@ -146,7 +146,7 @@ def sort_intels(intels: list[Intel]) -> list[Intel]:
 **行为：**
 - 若 Intel.summary 已存在且长度 > 10 → 直接复用
 - 若 summary 为空或过短 → 调用 LLM 生成 ≤ 100 字摘要
-- LLM 调用复用 `infra/llm.py`，Prompt 模板：`prompts/v1/summary.j2`
+- LLM 调用复用 `infra/llm` 门面，Prompt 模板：`prompts/v1/summary.j2`
 - LLM 失败 → 使用 title 作为摘要降级
 
 #### L3-4.2.2 周报总结生成（LLM）[Should]
@@ -294,7 +294,7 @@ async def generate_and_push(webhook: str) -> Weekly:
 | 总结最大长度 | 300 字（LLM 生成） |
 | 周报归档路径 | reports/weekly/{YYYY-MM-DD}.md |
 | 推送通道 | 复用 SPEC-2026-030 |
-| LLM 模型 | gpt-4o-mini（复用 infra/llm.py） |
+| LLM 后端 | 可配置（见 SPEC-2026-050，与 extract 共用同一 Provider） |
 
 ## 5. Error Handling 异常错误处理
 
@@ -384,7 +384,7 @@ async def generate_and_push(webhook: str) -> Weekly:
 | 推送 Spec | SPEC-2026-030（push_weekly_report） |
 | 存储 Spec | SPEC-2026-070（情报查询、周报归档、failed_push） |
 | 配置 Spec | SPEC-2026-050（timezone、competitor name） |
-| 代码文件 | `intel/weekly.py`, `prompts/v1/weekly_summary.j2`, `scheduler.py` |
+| 代码文件 | `intel/weekly.py`, `prompts/v1/weekly_summary.j2`, `infra/llm/` |
 
 ## 8. Open Questions 待定问题
 
@@ -398,4 +398,5 @@ async def generate_and_push(webhook: str) -> Weekly:
 | 日期 | 版本 | 修改内容 | 修改人 |
 |------|------|----------|--------|
 | 2026-05-30 | 1.0 | 初稿创建 | Product Team |
+| 2026-05-30 | 1.2 | LLM 可插拔 Provider 交叉引用 | Product Team |
 | 2026-05-30 | 1.1 | P0 修订：UTC 存储 + 时区边界转换查询（对齐 SPEC-2026-001 §3.8） | Product Team |

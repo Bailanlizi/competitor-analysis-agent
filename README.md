@@ -9,7 +9,7 @@
 | 能力 | 说明 |
 |------|------|
 | 定时采集 | RSS 订阅 + 静态 HTTP 页面，默认每 60 分钟执行 |
-| 情报提取 | GPT-4o-mini 结构化提取；无 API Key 时降级为规则匹配 |
+| 情报提取 | 可插拔 LLM 后端（默认 OpenAI）；无 API Key 时降级为规则匹配 |
 | 实时推送 | 高置信度情报推送飞书/钉钉 webhook |
 | 周报汇总 | 每周一 09:00 生成 Markdown 周报并推送 |
 | 数据治理 | 去重、原始 HTML 归档、失败推送记录、日志清理 |
@@ -48,7 +48,7 @@ competitor-analysis-agent/
 │   └── weekly.py           # 周报生成
 ├── infra/
 │   ├── db.py               # SQLite 存储
-│   ├── llm.py              # LLM 调用与降级
+│   ├── llm/                # LLM 可插拔层（Provider + 降级）
 │   ├── http.py             # HTTP 客户端
 │   ├── log.py              # 结构化日志
 │   └── utils.py            # 工具函数
@@ -61,7 +61,43 @@ competitor-analysis-agent/
 ## 环境要求
 
 - Python 3.11+
-- 网络访问（采集目标站点 + OpenAI API）
+- 网络访问（采集目标站点 + LLM API）
+
+### LLM 后端配置（可插拔）
+
+在 `config/competitors.yaml` 中通过 `llm` 段切换后端，**无需改代码**：
+
+```yaml
+llm:
+  provider: openai          # openai | deepseek | qwen | moonshot | zhipu | ollama | azure | custom
+  model: gpt-4o-mini
+```
+
+| provider | 环境变量 | 说明 |
+|----------|----------|------|
+| `openai` | `OPENAI_API_KEY` | 默认 |
+| `deepseek` | `DEEPSEEK_API_KEY` | DeepSeek |
+| `qwen` | `DASHSCOPE_API_KEY` | 通义千问兼容模式 |
+| `moonshot` | `MOONSHOT_API_KEY` | Kimi |
+| `zhipu` | `ZHIPU_API_KEY` | 智谱 |
+| `ollama` | （无需） | 本地 `http://localhost:11434/v1` |
+| `custom` | 自定义 | 需同时配置 `base_url` 和 `api_key_env` |
+
+切换示例：
+
+```yaml
+# DeepSeek
+llm:
+  provider: deepseek
+  model: deepseek-chat
+
+# 本地 Ollama
+llm:
+  provider: ollama
+  model: qwen2.5:7b
+```
+
+修改配置后重启进程即可生效。
 
 ## 快速开始
 
@@ -89,7 +125,9 @@ cp .env.example .env
 编辑 `.env`，填入：
 
 ```env
-OPENAI_API_KEY=sk-...        # LLM 情报提取（可选，无则规则降级）
+OPENAI_API_KEY=sk-...        # 默认 LLM（llm.provider: openai）
+DEEPSEEK_API_KEY=            # llm.provider: deepseek
+DASHSCOPE_API_KEY=           # llm.provider: qwen
 SEARCH_API_KEY=...           # 关键词搜索（可选，默认关闭）
 ```
 
@@ -188,7 +226,7 @@ pytest tests/test_collect.py -v
 pytest tests/test_pipeline.py -v
 ```
 
-当前共 **62** 项测试。测试使用隔离临时目录，不会污染 `data/` 与 `logs/`。
+当前共 **70** 项测试。测试使用隔离临时目录，不会污染 `data/` 与 `logs/`。
 
 ## 开发进度
 
@@ -211,7 +249,7 @@ Spec 文档与实现状态追踪见 [specs/INDEX.md](specs/INDEX.md)。
 | HTTP | httpx |
 | RSS | feedparser |
 | 网页提取 | trafilatura |
-| LLM | OpenAI GPT-4o-mini |
+| LLM | 可插拔 Provider（OpenAI 兼容 SDK，默认 openai/gpt-4o-mini） |
 | 调度 | APScheduler |
 | 日志 | structlog (JSON) |
 | 测试 | pytest + pytest-asyncio |

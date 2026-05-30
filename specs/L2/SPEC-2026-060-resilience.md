@@ -1,7 +1,7 @@
 ---
 title: "韧性保障系统"
 spec_id: "SPEC-2026-060"
-version: "1.0"
+version: "1.1"
 status: implemented
 author: "Product Team"
 created: "2026-05-30"
@@ -113,13 +113,31 @@ async def fetch_with_retry(url: str) -> httpx.Response: ...
 - 3xx 重定向：httpx 默认跟随，最多 5 次跳转
 - 429 Too Many Requests：视为 5xx，重试 2 次
 
-#### L3-6.2.1 LLM 超时/限流重试 [Must]
+#### L3-6.2.0 LLM Provider 抽象层 [Must]
 
 **行为：**
-- 触发条件：OpenAI API 返回 429（Rate Limit）、408（Timeout）、500/502/503
+- 定义 `LLMProvider` Protocol（`infra/llm/base.py`）：统一 `chat()` 接口
+- `OpenAICompatProvider`（`infra/llm/providers/openai_compat.py`）适配 OpenAI 兼容 Chat Completions API
+- `factory.create_provider()` 按 SPEC-2026-050 `llm` 配置实例化 Provider
+- 业务层（020/040）仅调用 `infra/llm` 门面（`extract` / `generate_summary` / `generate_weekly_summary`）
+- 规则降级 `_rule_extract` 位于 `infra/llm/fallback.py`，与 Provider 实现解耦
+
+**扩展原则：** 新增后端 = 注册 preset 或实现 Provider 类，业务模块零改动
+
+| 组件 | 路径 | 职责 |
+|------|------|------|
+| LLMProvider | infra/llm/base.py | Protocol |
+| OpenAICompatProvider | infra/llm/providers/openai_compat.py | API 调用 + 重试 |
+| factory | infra/llm/factory.py | preset 注册表 |
+| fallback | infra/llm/fallback.py | 规则降级 |
+
+#### L3-6.2.1 LLM API 重试（Provider 层）[Must]
+
+**行为：**
+- 触发条件：OpenAI 兼容 API 返回 429（Rate Limit）、408（Timeout）、500/502/503
 - 重试策略：最多 2 次，间隔 2s（固定）
-- 使用 tenacity 装饰 `_llm_extract` 函数
-- 每次调用记录 token 消耗（成功或失败均记录）
+- 使用 tenacity 装饰 `OpenAICompatProvider.chat()`
+- 每次调用记录 token 消耗（成功或失败均记录）；日志含 `provider` 字段
 
 ```python
 @retry(
@@ -128,14 +146,14 @@ async def fetch_with_retry(url: str) -> httpx.Response: ...
     retry=retry_if_exception_type((openai.RateLimitError, openai.APITimeoutError, openai.APIConnectionError)),
     reraise=True
 )
-async def _llm_extract(raw: RawDoc) -> dict: ...
+async def chat(self, messages, *, max_tokens, json_mode=False): ...
 ```
 
 #### L3-6.2.2 规则提取降级 [Must]
 
 **行为：**
-- 触发条件：LLM 重试 2 次后仍失败
-- 降级逻辑（`_rule_extract`）：
+- 触发条件：Provider 不可用（无 API Key）或 `chat()` 重试 2 次后仍失败
+- 降级逻辑（`rule_extract`）：
 
 ```python
 def _rule_extract(raw: RawDoc) -> dict:
@@ -195,7 +213,7 @@ def _rule_extract(raw: RawDoc) -> dict:
 - 维护全局计数器 `llm_consecutive_failures`（内存变量）
 - LLM 调用失败 → 计数 +1；成功 → 计数归零
 - 计数 ≥ 3 → 进入 rate_limited 模式，持续 15 分钟
-- rate_limited 模式下：所有 LLM 调用直接走 `_rule_extract`，不发起 API 请求
+- rate_limited 模式下：所有 LLM 调用跳过 Provider，直接 `rule_extract`
 - 15 分钟后自动恢复 normal，计数归零
 - 日志事件：`rate_limit_mode_enabled` / `rate_limit_mode_disabled`
 
@@ -272,9 +290,9 @@ def _rule_extract(raw: RawDoc) -> dict:
 
 **AC-5：LLM 降级规则提取**
 
-- Given：模拟 OpenAI API 连续 2 次返回 429
+- Given：模拟 LLM API 连续 2 次返回 429；或 Provider 不可用（无 API Key）
 - When：调用 extract(raw_doc)
-- Then：返回 rule_fallback 结果；intel_type 基于关键词判定；confidence ≤ 0.6
+- Then：返回 rule_fallback 结果；intel_type 基于关键词判定；confidence ≤ 0.6；不可用时零 API 请求
 
 **AC-6：单源失败不阻塞**
 
@@ -309,7 +327,8 @@ def _rule_extract(raw: RawDoc) -> dict:
 | 采集 Spec | SPEC-2026-010（HTTP 重试消费方） |
 | 处理 Spec | SPEC-2026-020（LLM 降级消费方） |
 | 推送 Spec | SPEC-2026-030（Webhook 重试） |
-| 代码文件 | `infra/llm.py`（LLM 重试+降级）、tenacity 装饰器用于 `intel/collect.py` |
+| 代码文件 | `infra/llm/`（Provider + 重试 + 降级）、tenacity 装饰器用于 `intel/collect.py` |
+| 配置 Spec | SPEC-2026-050（`llm` 段） |
 
 ## 8. Open Questions 待定问题
 
@@ -322,4 +341,5 @@ def _rule_extract(raw: RawDoc) -> dict:
 
 | 日期 | 版本 | 修改内容 | 修改人 |
 |------|------|----------|--------|
+| 2026-05-30 | 1.1 | LLM Provider 抽象层 L3-6.2.0；适配器重试 | Product Team |
 | 2026-05-30 | 1.0 | 初稿创建 | Product Team |
