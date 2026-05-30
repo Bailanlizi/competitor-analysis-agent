@@ -12,5 +12,12 @@
     "summary": "Radar now blocks high-risk transactions across all supported payment methods; defends against new fr",
     "source_url": "https://stripe.com/blog/expanding-stripe-radar-to-protect-more-of-your-business",
     "discovered_at": "2026-05-30T08:30:53Z"
+  },
+  {
+    "id": "434a841dfdfe",
+    "title": "Stripe API 版本升级机制",
+    "summary": "Stripe 发布新版API升级指南，区分重大版本与月度兼容更新。",
+    "source_url": "https://docs.stripe.com/upgrades",
+    "discovered_at": "2026-05-30T12:19:52Z"
   }
 ]

@@ -23,6 +23,21 @@
 
 ## 日志条目
 
+### 2026-05-30 | 修复 HTTP 采集 trafilatura Document 兼容
+
+- **类型：** Bug
+- **状态：** 已解决
+- **影响范围：** `intel/collect.py`、`tests/test_collect.py`
+- **现象：** HTTP 200 后 `collect_failed error="'Document' object has no attribute 'get'"`，Slack/Stripe/Linear 共 5 个 HTTP 源无产出。
+- **原因：** `trafilatura.bare_extraction()` 在新版返回 `trafilatura.settings.Document`，旧代码按 dict 调用 `.get()`。
+- **解决 / 做法：**
+  - 新增 `_fields_from_extraction()`：兼容 dict 与 Document（`.text` / `.title` 属性）。
+  - 抽取 `_extract_http_content()` 统一 bare_extraction 与 fallback 逻辑。
+  - 新增测试：`test_fields_from_extraction_*`、`test_ac4c_http_collect_trafilatura_document`。
+- **备注：** 11 passed in test_collect；全量 pytest 需本地确认。HTTP 源首次采集仍受 `content_hash` 去重约束。
+
+---
+
 ### 2026-05-30 | 清库后 RSS 全链路验证通过（11 条推送）
 
 - **类型：** 踩坑 / 验证
@@ -34,7 +49,7 @@
   1. 停止 `main.py`（若在跑）
   2. `Remove-Item data\intel.db`（可选备份 `.bak`）
   3. `python run_once.py`
-- **备注：** HTTP 源仍全部失败（见下条「trafilatura Document」）。Slack 配置 rss+atom 双 Feed 产生 3 条 `pre_dedup_skipped`；2 条 `title_duplicate_skipped`（CLI 标题相似）浪费 LLM Token。
+- **备注：** Slack 配置 rss+atom 双 Feed 产生 3 条 `pre_dedup_skipped`；2 条 `title_duplicate_skipped`（CLI 标题相似）浪费 LLM Token。HTTP 源 bug 已于同日修复（见上条）。
 
 ---
 
@@ -58,12 +73,12 @@
 ### 2026-05-30 | HTTP 采集失败：trafilatura 返回 Document 非 dict
 
 - **类型：** Bug
-- **状态：** 待处理
+- **状态：** 已解决（见顶部「修复 HTTP 采集 trafilatura Document 兼容」）
 - **影响范围：** `intel/collect.py` → `_collect_http`
 - **现象：** HTTP 200 成功，随后 `collect_failed error="'Document' object has no attribute 'get'"`。Slack / Stripe / Linear 共 5 个 HTTP 源零产出；Linear 无 RSS，完全无情报。
 - **原因：** 新版 `trafilatura.bare_extraction()` 返回 `Document` 对象，代码仍使用 `doc.get("text")` / `doc.get("title")` 按 dict 访问。
-- **解决 / 做法：** 暂无。建议在 `_collect_http` 中兼容 `Document`（属性访问或 `as_dict()`）与 legacy dict 返回值；补充 `tests/test_collect.py` 用例。
-- **备注：** 相关代码约 `intel/collect.py` L107–110。
+- **解决 / 做法：** `_fields_from_extraction()` + `_extract_http_content()`；见 DEVLOG 最新条目。
+- **备注：** 相关代码 `intel/collect.py`。
 
 ---
 
@@ -153,7 +168,7 @@
 
 | 优先级 | 项 | 状态 |
 |--------|-----|------|
-| P0 | 修复 HTTP `trafilatura Document` 兼容 | 待处理 |
+| P0 | 修复 HTTP `trafilatura Document` 兼容 | 已解决 |
 | P2 | Slack 去掉重复 RSS/Atom 源 | 可选 |
 | P2 | failed_push 补推或 CLI 工具 | 未实现 |
 | P3 | Pre-LLM 标题去重减少 Token | 未实现 |

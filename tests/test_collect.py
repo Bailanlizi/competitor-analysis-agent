@@ -11,7 +11,14 @@ import pytest
 import respx
 
 from config.settings import AppSettings, CompetitorConfig, SearchConfig, SourceConfig
-from intel.collect import _collect_http, _collect_rss, collect_all, job_collect
+from intel.collect import (
+    _collect_http,
+    _collect_rss,
+    _extract_http_content,
+    _fields_from_extraction,
+    collect_all,
+    job_collect,
+)
 from models import RawDoc
 
 
@@ -81,6 +88,46 @@ async def test_ac4_http_collect(tmp_env):
     assert len(docs) == 1
     assert docs[0].title == "Changelog - Product"
     assert "Release notes" in docs[0].content
+
+
+@pytest.mark.asyncio
+async def test_ac4c_http_collect_trafilatura_document(tmp_env):
+    html = "<html><head><title>Changelog</title></head><body><p>Release notes</p></body></html>"
+    source = SourceConfig(type="http", url="https://example.com/changelog", name="Changelog")
+    with respx.mock:
+        respx.get("https://example.com/changelog").mock(return_value=httpx.Response(200, text=html))
+        with patch("intel.collect.trafilatura.bare_extraction") as mock_extract:
+            mock_extract.return_value = SimpleNamespace(
+                text="Release notes body text",
+                title="Changelog - Product",
+            )
+            docs = await _collect_http("competitor_a", source)
+    assert len(docs) == 1
+    assert docs[0].title == "Changelog - Product"
+    assert "Release notes" in docs[0].content
+
+
+def test_fields_from_extraction_document_object():
+    doc = SimpleNamespace(text="Body from Document", title="Doc Title")
+    text, title = _fields_from_extraction(doc)
+    assert text == "Body from Document"
+    assert title == "Doc Title"
+
+
+def test_fields_from_extraction_legacy_dict():
+    text, title = _fields_from_extraction({"text": "dict body", "title": "Dict Title"})
+    assert text == "dict body"
+    assert title == "Dict Title"
+
+
+def test_extract_http_content_uses_document_bare_extraction(tmp_env):
+    html = "<html><head><title>Page</title></head><body><p>Notes</p></body></html>"
+    source = SourceConfig(type="http", url="https://example.com/changelog", name="Changelog")
+    with patch("intel.collect.trafilatura.bare_extraction") as mock_bare:
+        mock_bare.return_value = SimpleNamespace(text="Extracted notes", title="Page Title")
+        content, title = _extract_http_content(html, source)
+    assert content == "Extracted notes"
+    assert title == "Page Title"
 
 
 @pytest.mark.asyncio

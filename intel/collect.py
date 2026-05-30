@@ -35,6 +35,27 @@ def _extract_html_title(html: str) -> str:
     return tag.get_text(strip=True) if tag else ""
 
 
+def _fields_from_extraction(doc: Any) -> tuple[str, str]:
+    """Normalize bare_extraction output (legacy dict or trafilatura Document)."""
+    if isinstance(doc, dict):
+        return doc.get("text") or "", doc.get("title") or ""
+    text = getattr(doc, "text", None) or ""
+    title = getattr(doc, "title", None) or ""
+    return text, title
+
+
+def _extract_http_content(html: str, source: SourceConfig) -> tuple[str, str]:
+    doc = trafilatura.bare_extraction(html, with_metadata=True)
+    if doc:
+        content, title = _fields_from_extraction(doc)
+        if not title:
+            title = _extract_html_title(html) or source.name or "Untitled"
+        return content, title
+    content = trafilatura.extract(html) or ""
+    title = _extract_html_title(html) or source.name or "Untitled"
+    return content, title
+
+
 async def _collect_rss(competitor_id: str, source: SourceConfig, settings: AppSettings) -> list[RawDoc]:
     loop = asyncio.get_event_loop()
     feed = await loop.run_in_executor(None, feedparser.parse, str(source.url))
@@ -104,14 +125,7 @@ async def _collect_http(competitor_id: str, source: SourceConfig) -> list[RawDoc
             return []
 
         html = resp.text
-        doc = trafilatura.bare_extraction(html, with_metadata=True)
-        if doc:
-            content = doc.get("text") or ""
-            title = doc.get("title") or _extract_html_title(html) or source.name or "Untitled"
-        else:
-            content = trafilatura.extract(html) or ""
-            title = _extract_html_title(html) or source.name or "Untitled"
-
+        content, title = _extract_http_content(html, source)
         content = content[:5000]
         content_hash = compute_content_hash(competitor_id, url, content)
 
