@@ -196,6 +196,10 @@ python -c "import asyncio; from intel.weekly import job_weekly; asyncio.run(job_
 
 时区由 `config/competitors.yaml` 中的 `timezone` 控制，默认 `Asia/Shanghai`。
 
+## 开发日志
+
+开发过程中的问题、原因、解决方案与优化记录在 [`docs/DEVLOG.md`](docs/DEVLOG.md)。修复 Bug 或完成优化后请按该文件顶部格式追加条目（Cursor Agent 规则会自动提醒维护）。
+
 ## 运行产物
 
 | 路径 | 说明 |
