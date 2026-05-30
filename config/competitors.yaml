@@ -1,0 +1,45 @@
+interval_minutes: 60
+cold_start_days: 7
+timezone: "Asia/Shanghai"
+feishu_webhook: ""
+dingtalk_webhook: ""
+
+search:
+  enabled: false
+  provider: "serpapi"
+  api_key_env: "SEARCH_API_KEY"
+  keywords:
+    - "competitor product update"
+  max_results: 5
+
+competitors:
+  - id: competitor_a
+    name: "竞品 A（占位）"
+    enabled: true
+    sources:
+      - type: rss
+        url: "https://example.com/competitor_a/feed.xml"
+        name: ""
+      - type: http
+        url: "https://example.com/competitor_a/changelog"
+        name: "更新日志"
+
+  - id: competitor_b
+    name: "竞品 B（占位）"
+    enabled: true
+    sources:
+      - type: rss
+        url: "https://example.com/competitor_b/blog/feed.xml"
+      - type: http
+        url: "https://example.com/competitor_b/pricing"
+        name: "定价页面"
+
+  - id: competitor_c
+    name: "竞品 C（占位）"
+    enabled: true
+    sources:
+      - type: rss
+        url: "https://example.com/competitor_c/releases.atom"
+      - type: http
+        url: "https://example.com/competitor_c/changelog"
+        name: "版本更新"

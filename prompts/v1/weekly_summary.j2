@@ -1,0 +1,5 @@
+以下是本周竞品情报列表，请生成一份不超过300字的周报总结，包含关键发现、趋势和值得关注的点：
+
+{% for intel in intels %}
+- [{{ intel.competitor }}] {{ intel.title }}: {{ intel.summary }}
+{% endfor %}
